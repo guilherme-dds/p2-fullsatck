@@ -7,7 +7,7 @@ Sistema simples de e-commerce que permite **cadastrar (POST)**, **listar (GET)**
 |-----------|-------------------------------|---------------------------|
 | Backend   | PHP + **Laravel**             | VM (Rocky Linux)          |
 | Banco     | **MariaDB**                   | VM (Rocky Linux)          |
-| Frontend  | React (Vite) + Blade (extra)  | PC (React) / VM (Blade)   |
+| Frontend  | React (Vite)                  | PC                        |
 
 ## Estrutura
 
@@ -20,7 +20,6 @@ backend/
     app/Models/Produto.php
     database/migrations/..._create_produtos_table.php
     database/seeders/ProdutoSeeder.php -> produtos de exemplo
-    resources/views/produtos/index.blade.php  -> formulários com @csrf
 frontend/                              -> React (vitrine + tela de gerenciamento)
 ```
 
@@ -28,14 +27,13 @@ frontend/                              -> React (vitrine + tela de gerenciamento
 
 | Método | URL                 | Ação                          |
 |--------|---------------------|-------------------------------|
-| GET    | `/`                 | redireciona para `/produtos`  |
+| GET    | `/`                 | status da API                 |
 | GET    | `/csrf-token`       | devolve o token CSRF (React)  |
 | GET    | `/produtos`         | lista produtos                |
 | POST   | `/produtos`         | cadastra produto              |
 | DELETE | `/produtos/{id}`    | exclui produto                |
 
-As mesmas rotas servem o Blade (HTML) e o React (JSON — quando a requisição envia
-`Accept: application/json`, o controller responde em JSON).
+O controller responde sempre em JSON, que é consumido pelo frontend React.
 
 ## Tabela `produtos`
 
@@ -82,7 +80,7 @@ acessar o IP da VM. Se usar NAT, crie um redirecionamento da porta 8000.
    cd ~/loja-api
    php artisan serve --host=0.0.0.0 --port=8000
    ```
-4. Teste no navegador do PC: `http://IP_DA_VM:8000/produtos` (tela em Blade).
+4. Teste no navegador do PC: `http://IP_DA_VM:8000/produtos` (deve mostrar a lista em JSON).
 
 Se não abrir no PC, confira o firewall: `sudo firewall-cmd --list-ports` (deve aparecer `8000/tcp`).
 
@@ -113,7 +111,7 @@ Abra `http://localhost:5173`.
 O Vite repassa (proxy) as chamadas de `/backend/...` para o Laravel na VM, então
 para o navegador tudo está em `localhost:5173` e o cookie de sessão funciona.
 Antes de um POST/DELETE, o React chama `GET /csrf-token` e envia o token no campo
-`_token` e no cabeçalho `X-CSRF-TOKEN` — o mesmo que o `@csrf` faz no Blade.
+`_token` e no cabeçalho `X-CSRF-TOKEN` — o mesmo papel que o `@csrf` teria num formulário Blade.
 O middleware de CSRF do Laravel continua **ativo** em todas as rotas.
 
 ## Ver o banco de dados na VM

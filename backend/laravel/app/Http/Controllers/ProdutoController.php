@@ -8,18 +8,13 @@ use Illuminate\Http\Request;
 class ProdutoController extends Controller
 {
     /**
-     * GET /produtos — lista os produtos.
-     * Retorna JSON para o React ou a view Blade para o navegador.
+     * GET /produtos — lista os produtos (JSON para o frontend React).
      */
-    public function index(Request $request)
+    public function index()
     {
         $produtos = Produto::orderByDesc('id')->get();
 
-        if ($request->wantsJson()) {
-            return response()->json($produtos);
-        }
-
-        return view('produtos.index', compact('produtos'));
+        return response()->json($produtos);
     }
 
     /**
@@ -53,29 +48,17 @@ class ProdutoController extends Controller
 
         $produto = Produto::create($dados);
 
-        if ($request->wantsJson()) {
-            return response()->json($produto, 201);
-        }
-
-        return redirect()
-            ->route('produtos.index')
-            ->with('sucesso', "Produto \"{$produto->nome}\" cadastrado com sucesso!");
+        return response()->json($produto, 201);
     }
 
     /**
      * DELETE /produtos/{produto} — exclui um produto.
      */
-    public function destroy(Request $request, Produto $produto)
+    public function destroy(Produto $produto)
     {
         $nome = $produto->nome;
         $produto->delete();
 
-        if ($request->wantsJson()) {
-            return response()->json(['mensagem' => "Produto \"{$nome}\" excluído."]);
-        }
-
-        return redirect()
-            ->route('produtos.index')
-            ->with('sucesso', "Produto \"{$nome}\" excluído.");
+        return response()->json(['mensagem' => "Produto \"{$nome}\" excluído."]);
     }
 }

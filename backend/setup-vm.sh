@@ -72,7 +72,7 @@ else
     echo "==> Projeto já existe em $APP_DIR (reaproveitando)."
 fi
 
-echo "==> Copiando arquivos da loja (rotas, controller, model, migration, views)..."
+echo "==> Copiando arquivos da loja (rotas, controller, model, migration, seeders)..."
 cp -r "$SCRIPT_DIR/laravel/." "$APP_DIR/"
 cd "$APP_DIR"
 
@@ -116,6 +116,6 @@ echo " Backend pronto!"
 echo " Para iniciar o servidor:"
 echo "   cd $APP_DIR && php artisan serve --host=0.0.0.0 --port=$PORTA"
 echo
-echo " Acesse no PC:   http://$VM_IP:$PORTA/produtos   (versão Blade)"
+echo " Teste no PC:    http://$VM_IP:$PORTA/produtos   (deve mostrar o JSON)"
 echo " No frontend React (.env):  VITE_BACKEND_URL=http://$VM_IP:$PORTA"
 echo "============================================================"

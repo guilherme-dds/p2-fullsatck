@@ -7,17 +7,17 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Rotas da Loja (e-commerce)
 |--------------------------------------------------------------------------
-| As mesmas rotas atendem:
-|  - o frontend em Blade (formulários HTML com @csrf), e
-|  - o frontend em React (requisições com "Accept: application/json").
+| O frontend é feito em React e consome estas rotas em JSON.
+| A proteção CSRF do grupo "web" continua ativa: o React busca o token em
+| /csrf-token e o envia no cabeçalho X-CSRF-TOKEN em todo POST e DELETE.
 */
 
-// Página inicial -> lista de produtos
+// Status da API
 Route::get('/', function () {
-    return redirect()->route('produtos.index');
+    return response()->json(['api' => 'Loja Virtual', 'status' => 'online']);
 });
 
-// Entrega o token CSRF para o frontend React (equivalente ao @csrf do Blade)
+// Entrega o token CSRF para o frontend React
 Route::get('/csrf-token', function () {
     return response()->json(['token' => csrf_token()]);
 })->name('csrf');
