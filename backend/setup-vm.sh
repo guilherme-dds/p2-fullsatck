@@ -32,8 +32,9 @@ fi
 echo "==> PHP $PHP_VER encontrado -> Laravel $LARAVEL_VER"
 
 FALTANDO=""
-for ext in pdo_mysql mbstring xml ctype tokenizer fileinfo openssl curl dom; do
-    php -m | grep -qi "^$ext$" || FALTANDO="$FALTANDO $ext"
+MODULOS="$(php -m)"   # lê a lista uma vez só (evita erro de pipe com pipefail)
+for ext in pdo_mysql mbstring xml ctype tokenizer fileinfo openssl dom; do
+    grep -qix "$ext" <<< "$MODULOS" || FALTANDO="$FALTANDO $ext"
 done
 if [ -n "$FALTANDO" ]; then
     echo "ATENÇÃO: extensões PHP faltando:$FALTANDO"
