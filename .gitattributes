@@ -1,2 +1,1 @@
-# Scripts de shell sempre com final de linha Unix (LF), senão quebram no Linux
 *.sh text eol=lf

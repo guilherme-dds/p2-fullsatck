@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cadastrarProduto, excluirProduto, listarProdutos } from './api.js'
 
-const NOMES_CATEGORIAS = ['Eletrônicos', 'Roupas', 'Casa', 'Livros', 'Outros']
-const FORM_VAZIO = { nome: '', descricao: '', categoria: NOMES_CATEGORIAS[0], preco: '', estoque: 0 }
+const CATEGORIAS = ['Eletrônicos', 'Roupas', 'Casa', 'Livros', 'Outros']
+const FORM_VAZIO = { nome: '', descricao: '', categoria: CATEGORIAS[0], preco: '', estoque: 0 }
 
 const formatarPreco = (valor) =>
   Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function App() {
-  const [aba, setAba] = useState('loja')
+  const [aba, setAba] = useState('produtos')
   const [produtos, setProdutos] = useState([])
   const [carregando, setCarregando] = useState(true)
-  const [aviso, setAviso] = useState(null) // { tipo: 'ok' | 'erro', texto }
+  const [erroConexao, setErroConexao] = useState(null)
 
   async function carregar() {
     try {
       setProdutos(await listarProdutos())
+      setErroConexao(null)
     } catch (e) {
-      setAviso({ tipo: 'erro', texto: e.message })
+      setErroConexao(e.message)
     } finally {
       setCarregando(false)
     }
@@ -27,115 +28,107 @@ export default function App() {
     carregar()
   }, [])
 
-  // some o aviso sozinho depois de alguns segundos
-  useEffect(() => {
-    if (!aviso) return
-    const t = setTimeout(() => setAviso(null), 4000)
-    return () => clearTimeout(t)
-  }, [aviso])
-
   return (
     <>
       <header className="topo">
-        <div className="topo-conteudo">
-          <div className="marca">Loja Virtual</div>
-          <nav className="abas">
-            <button className={aba === 'loja' ? 'ativa' : ''} onClick={() => setAba('loja')}>
-              Vitrine
-            </button>
-            <button className={aba === 'admin' ? 'ativa' : ''} onClick={() => setAba('admin')}>
-              Gerenciar
-            </button>
-          </nav>
-        </div>
+        <span className="marca">Loja Virtual</span>
+        <nav>
+          <a href="#produtos" aria-current={aba === 'produtos' ? 'page' : undefined}
+             onClick={(e) => { e.preventDefault(); setAba('produtos') }}>
+            Produtos
+          </a>
+          <a href="#gerenciar" aria-current={aba === 'gerenciar' ? 'page' : undefined}
+             onClick={(e) => { e.preventDefault(); setAba('gerenciar') }}>
+            Gerenciar
+          </a>
+        </nav>
       </header>
 
       <main>
+        {erroConexao && <p className="mensagem erro" role="alert">{erroConexao}</p>}
+
         {carregando ? (
-          <div className="vazio">Carregando produtos...</div>
-        ) : aba === 'loja' ? (
-          <Vitrine produtos={produtos} />
+          <p className="vazio">Carregando produtos…</p>
+        ) : aba === 'produtos' ? (
+          <Catalogo produtos={produtos} />
         ) : (
-          <Gerenciar produtos={produtos} recarregar={carregar} setAviso={setAviso} />
+          <Gerenciar produtos={produtos} recarregar={carregar} />
         )}
       </main>
-
-      <footer className="rodape">Trabalho Final P2 · Desenvolvimento Full Stack · Laravel + React</footer>
-
-      {aviso && (
-        <div className={`toast ${aviso.tipo}`} role="status">
-          {aviso.texto}
-        </div>
-      )}
     </>
   )
 }
 
-/* ---------- LISTAR (GET) — vitrine da loja ---------- */
-function Vitrine({ produtos }) {
+function Catalogo({ produtos }) {
   const [busca, setBusca] = useState('')
-  const [filtro, setFiltro] = useState('Todos')
+  const [categoria, setCategoria] = useState('')
 
-  const visiveis = useMemo(
-    () =>
-      produtos.filter(
-        (p) =>
-          (filtro === 'Todos' || p.categoria === filtro) &&
-          p.nome.toLowerCase().includes(busca.trim().toLowerCase())
-      ),
-    [produtos, busca, filtro]
-  )
+  const grupos = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    const filtrados = produtos.filter(
+      (p) => (!categoria || p.categoria === categoria) && p.nome.toLowerCase().includes(termo)
+    )
+    return CATEGORIAS.map((c) => ({ categoria: c, itens: filtrados.filter((p) => p.categoria === c) }))
+      .filter((g) => g.itens.length > 0)
+  }, [produtos, busca, categoria])
 
   return (
-    <>
-      <section className="destaque">
-        <h1>Encontre o que você precisa</h1>
-        <p>{produtos.length} produtos disponíveis na loja</p>
-        <input
-          className="busca"
-          type="search"
-          placeholder="Buscar produto..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-      </section>
+    <section>
+      <h1>Produtos</h1>
+      <p className="resumo">
+        {produtos.length === 1 ? '1 produto à venda.' : `${produtos.length} produtos à venda.`}
+      </p>
 
       <div className="filtros">
-        {['Todos', ...NOMES_CATEGORIAS].map((c) => (
-          <button key={c} className={filtro === c ? 'chip ativo' : 'chip'} onClick={() => setFiltro(c)}>
-            {c}
-          </button>
-        ))}
+        <label>
+          Buscar
+          <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome do produto" />
+        </label>
+        <label>
+          Categoria
+          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+            <option value="">Todas</option>
+            {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </label>
       </div>
 
-      {visiveis.length === 0 ? (
-        <div className="vazio">Nenhum produto encontrado.</div>
+      {produtos.length === 0 ? (
+        <p className="vazio">Nenhum produto cadastrado. Cadastre o primeiro em Gerenciar.</p>
+      ) : grupos.length === 0 ? (
+        <p className="vazio">Nenhum produto encontrado com esses filtros.</p>
       ) : (
-        <div className="grade">
-          {visiveis.map((p) => (
-            <article key={p.id} className="produto">
-              <span className="categoria">{p.categoria}</span>
-              <h3>{p.nome}</h3>
-              <p className="descricao">{p.descricao || 'Sem descrição.'}</p>
-              <div className="produto-rodape">
-                <span className="preco">{formatarPreco(p.preco)}</span>
-                <span className={p.estoque > 0 ? 'estoque' : 'estoque esgotado'}>
-                  {p.estoque > 0 ? `${p.estoque} un.` : 'Esgotado'}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
+        grupos.map((g) => (
+          <div key={g.categoria} className="grupo">
+            <h2>{g.categoria}</h2>
+            <ul className="lista">
+              {g.itens.map((p) => (
+                <li key={p.id}>
+                  <div className="item-texto">
+                    <span className="item-nome">{p.nome}</span>
+                    {p.descricao && <span className="item-desc">{p.descricao}</span>}
+                  </div>
+                  <div className="item-preco">
+                    <span className="preco">{formatarPreco(p.preco)}</span>
+                    <span className={p.estoque > 0 ? 'estoque' : 'estoque esgotado'}>
+                      {p.estoque > 0 ? `${p.estoque} em estoque` : 'Esgotado'}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
-    </>
+    </section>
   )
 }
 
-/* ---------- CADASTRAR (POST) e EXCLUIR (DELETE) ---------- */
-function Gerenciar({ produtos, recarregar, setAviso }) {
+function Gerenciar({ produtos, recarregar }) {
   const [form, setForm] = useState(FORM_VAZIO)
   const [erros, setErros] = useState({})
   const [enviando, setEnviando] = useState(false)
+  const [mensagem, setMensagem] = useState(null)
 
   const alterar = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -145,117 +138,115 @@ function Gerenciar({ produtos, recarregar, setAviso }) {
     setErros({})
     try {
       const novo = await cadastrarProduto(form)
-      setAviso({ tipo: 'ok', texto: `Produto "${novo.nome}" cadastrado!` })
+      setMensagem({ tipo: 'ok', texto: `Produto cadastrado: ${novo.nome}.` })
       setForm(FORM_VAZIO)
       await recarregar()
     } catch (err) {
-      setErros(err.campos || {})
-      setAviso({ tipo: 'erro', texto: err.message })
+      const campos = err.campos || {}
+      setErros(campos)
+      setMensagem({
+        tipo: 'erro',
+        texto: Object.keys(campos).length ? 'O produto não foi cadastrado. Revise os campos marcados.' : err.message,
+      })
     } finally {
       setEnviando(false)
     }
   }
 
   async function excluir(produto) {
-    if (!confirm(`Excluir "${produto.nome}"?`)) return
+    if (!confirm(`Excluir "${produto.nome}"? Essa ação não pode ser desfeita.`)) return
     try {
       const resp = await excluirProduto(produto.id)
-      setAviso({ tipo: 'ok', texto: resp.mensagem })
+      setMensagem({ tipo: 'ok', texto: resp.mensagem })
       await recarregar()
     } catch (err) {
-      setAviso({ tipo: 'erro', texto: err.message })
+      setMensagem({ tipo: 'erro', texto: err.message })
     }
   }
 
-  const erroDo = (campo) => erros[campo] && <small className="erro-campo">{erros[campo][0]}</small>
-  const classe = (campo) => (erros[campo] ? 'invalido' : '')
+  const erroDo = (campo) => erros[campo] && <span className="erro-campo">{erros[campo][0]}</span>
+  const invalido = (campo) => (erros[campo] ? 'true' : undefined)
 
   return (
-    <div className="painel">
-      <section className="caixa">
-        <h2>Novo produto</h2>
-        <p className="subtitulo">Preencha os dados para cadastrar na loja.</p>
+    <section>
+      <h1>Gerenciar produtos</h1>
+      {mensagem && (
+        <p className={`mensagem ${mensagem.tipo}`} role="status">{mensagem.texto}</p>
+      )}
 
-        <form onSubmit={enviar}>
+      <div className="painel">
+        <form onSubmit={enviar} className="formulario">
+          <h2>Novo produto</h2>
+
           <label htmlFor="nome">Nome</label>
-          <input id="nome" name="nome" className={classe('nome')} value={form.nome} onChange={alterar}
-                 placeholder="Ex.: Fone de ouvido" required />
+          <input id="nome" name="nome" value={form.nome} onChange={alterar} aria-invalid={invalido('nome')} required />
           {erroDo('nome')}
 
-          <label htmlFor="descricao">Descrição</label>
-          <textarea id="descricao" name="descricao" rows="3" className={classe('descricao')}
-                    value={form.descricao} onChange={alterar} placeholder="Opcional" />
+          <label htmlFor="descricao">Descrição <span className="opcional">(opcional)</span></label>
+          <textarea id="descricao" name="descricao" rows="3" value={form.descricao} onChange={alterar}
+                    aria-invalid={invalido('descricao')} />
           {erroDo('descricao')}
 
           <label htmlFor="categoria">Categoria</label>
           <select id="categoria" name="categoria" value={form.categoria} onChange={alterar}>
-            {NOMES_CATEGORIAS.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+            {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
           </select>
           {erroDo('categoria')}
 
-          <div className="linha">
+          <div className="dupla">
             <div>
               <label htmlFor="preco">Preço (R$)</label>
-              <input id="preco" name="preco" type="number" step="0.01" min="0" className={classe('preco')}
-                     value={form.preco} onChange={alterar} placeholder="0,00" required />
+              <input id="preco" name="preco" type="number" step="0.01" min="0" value={form.preco}
+                     onChange={alterar} aria-invalid={invalido('preco')} required />
               {erroDo('preco')}
             </div>
             <div>
               <label htmlFor="estoque">Estoque</label>
-              <input id="estoque" name="estoque" type="number" min="0" className={classe('estoque')}
-                     value={form.estoque} onChange={alterar} required />
+              <input id="estoque" name="estoque" type="number" min="0" value={form.estoque}
+                     onChange={alterar} aria-invalid={invalido('estoque')} required />
               {erroDo('estoque')}
             </div>
           </div>
 
-          <button type="submit" className="botao primario" disabled={enviando}>
-            {enviando ? 'Salvando...' : 'Cadastrar produto'}
+          <button type="submit" className="botao" disabled={enviando}>
+            {enviando ? 'Cadastrando…' : 'Cadastrar produto'}
           </button>
         </form>
-      </section>
 
-      <section className="caixa">
-        <div className="caixa-titulo">
-          <h2>Produtos cadastrados</h2>
-          <span className="contador">{produtos.length}</span>
-        </div>
-
-        {produtos.length === 0 ? (
-          <div className="vazio">Nenhum produto cadastrado ainda.</div>
-        ) : (
-          <div className="tabela-rolagem">
-            <table>
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>Preço</th>
-                  <th>Estoque</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {produtos.map((p) => (
-                  <tr key={p.id}>
-                    <td className="celula-produto">
-                      <strong>{p.nome}</strong>
-                      <small>#{p.id} · {p.categoria}</small>
-                    </td>
-                    <td className="nowrap">{formatarPreco(p.preco)}</td>
-                    <td>{p.estoque}</td>
-                    <td className="direita">
-                      <button className="botao perigo" onClick={() => excluir(p)}>
-                        Excluir
-                      </button>
-                    </td>
+        <div className="cadastrados">
+          <h2>Cadastrados ({produtos.length})</h2>
+          {produtos.length === 0 ? (
+            <p className="vazio">Nenhum produto ainda. Use o formulário para cadastrar.</p>
+          ) : (
+            <div className="rolagem">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Produto</th>
+                    <th scope="col">Categoria</th>
+                    <th scope="col" className="num">Preço</th>
+                    <th scope="col" className="num">Estoque</th>
+                    <th scope="col"><span className="sr">Ações</span></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
+                </thead>
+                <tbody>
+                  {produtos.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.nome}</td>
+                      <td>{p.categoria}</td>
+                      <td className="num">{formatarPreco(p.preco)}</td>
+                      <td className="num">{p.estoque}</td>
+                      <td className="acoes">
+                        <button className="excluir" onClick={() => excluir(p)}>Excluir</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }

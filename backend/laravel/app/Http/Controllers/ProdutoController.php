@@ -7,9 +7,6 @@ use Illuminate\Http\Request;
 
 class ProdutoController extends Controller
 {
-    /**
-     * GET /produtos — lista os produtos (JSON para o frontend React).
-     */
     public function index()
     {
         $produtos = Produto::orderByDesc('id')->get();
@@ -17,9 +14,6 @@ class ProdutoController extends Controller
         return response()->json($produtos);
     }
 
-    /**
-     * POST /produtos — cadastra um novo produto.
-     */
     public function store(Request $request)
     {
         $dados = $request->validate(
@@ -51,9 +45,6 @@ class ProdutoController extends Controller
         return response()->json($produto, 201);
     }
 
-    /**
-     * DELETE /produtos/{produto} — exclui um produto.
-     */
     public function destroy(Produto $produto)
     {
         $nome = $produto->nome;

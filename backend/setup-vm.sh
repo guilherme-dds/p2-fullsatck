@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Cria o projeto Laravel + banco MariaDB na VM Rocky Linux.
-# Pré-requisitos já instalados: PHP (8.1+), Composer e MariaDB.
-#
-# Uso (dentro da VM, na pasta "backend"):
-#   bash setup-vm.sh
-# Se o root do MariaDB tiver senha:
-#   DB_ROOT_PASS='senhaDoRoot' bash setup-vm.sh
 set -euo pipefail
 
 DB_NAME="loja"
@@ -15,7 +8,6 @@ APP_DIR="$HOME/loja-api"
 PORTA=8000
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# ---------- Verificações ----------
 for cmd in php composer mysql; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "ERRO: '$cmd' não encontrado."; exit 1; }
 done
@@ -32,7 +24,7 @@ fi
 echo "==> PHP $PHP_VER encontrado -> Laravel $LARAVEL_VER"
 
 FALTANDO=""
-MODULOS="$(php -m)"   # lê a lista uma vez só (evita erro de pipe com pipefail)
+MODULOS="$(php -m)"
 for ext in pdo_mysql mbstring xml ctype tokenizer fileinfo openssl dom; do
     grep -qix "$ext" <<< "$MODULOS" || FALTANDO="$FALTANDO $ext"
 done
@@ -42,7 +34,6 @@ if [ -n "$FALTANDO" ]; then
     exit 1
 fi
 
-# ---------- Banco de dados ----------
 echo "==> Garantindo que o MariaDB está rodando..."
 sudo systemctl enable --now mariadb
 
@@ -61,7 +52,6 @@ GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';
 FLUSH PRIVILEGES;
 SQL
 
-# ---------- Projeto Laravel ----------
 if [ ! -f "$APP_DIR/artisan" ]; then
     echo "==> Criando projeto Laravel em $APP_DIR..."
     composer create-project "laravel/laravel:$LARAVEL_VER" "$APP_DIR" --no-scripts
@@ -76,7 +66,6 @@ echo "==> Copiando arquivos da loja (rotas, controller, model, migration, seeder
 cp -r "$SCRIPT_DIR/laravel/." "$APP_DIR/"
 cd "$APP_DIR"
 
-# Define (ou substitui) uma variável no .env
 set_env() {
     sed -i "/^#\? \?$1=/d" .env
     echo "$1=$2" >> .env
@@ -103,7 +92,6 @@ php artisan config:clear
 php artisan migrate --force
 php artisan db:seed --force
 
-# ---------- Firewall (firewalld do Rocky) ----------
 if systemctl is-active --quiet firewalld; then
     echo "==> Liberando a porta $PORTA no firewall..."
     sudo firewall-cmd --permanent --add-port="$PORTA/tcp" >/dev/null

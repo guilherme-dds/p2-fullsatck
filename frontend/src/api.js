@@ -1,10 +1,7 @@
-// Comunicação com o backend Laravel (via proxy do Vite em /backend).
 const BASE = '/backend'
 
 let tokenCsrf = null
 
-// Busca o token CSRF no Laravel (rota GET /csrf-token).
-// É o mesmo valor que o @csrf do Blade coloca no campo oculto "_token".
 async function obterToken(forcar = false) {
   if (!tokenCsrf || forcar) {
     const resp = await fetch(`${BASE}/csrf-token`, {
@@ -37,7 +34,6 @@ async function requisicao(metodo, caminho, corpo, tentouDeNovo = false) {
     throw new Error('Servidor indisponível. Verifique se a VM está ligada.')
   }
 
-  // 419 = token CSRF expirado: pega um novo e tenta mais uma vez
   if (resp.status === 419 && !tentouDeNovo) {
     await obterToken(true)
     return requisicao(metodo, caminho, corpo, true)
