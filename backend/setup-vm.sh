@@ -7,6 +7,7 @@ DB_PASS="loja123"
 APP_DIR="$HOME/loja-api"
 PORTA=8000
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+export COMPOSER_ALLOW_SUPERUSER=1
 
 for cmd in php composer mysql; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "ERRO: '$cmd' não encontrado."; exit 1; }
